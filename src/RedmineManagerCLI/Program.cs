@@ -1,17 +1,20 @@
-﻿using System.CommandLine;
+﻿using System;
+using System.Threading.Tasks;
+using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Hosting;
-using System.CommandLine.Invocation;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System.CommandLine.Parsing;
-using System.Threading.Tasks;
+using System.CommandLine.Invocation;
+using System.Collections.Generic;
+
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using System;
-using System.ComponentModel;
-using System.IO;
+using Redmine.Net.Api;
+
+using RedmineManagerCLI.ConnectionService;
+
 
 namespace RedmineManagerCLI
 {
@@ -24,9 +27,7 @@ namespace RedmineManagerCLI
                     host.ConfigureAppConfiguration((configuration) =>
                     {
                         configuration.Sources.Clear();
-
-                        configuration
-                            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                        configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true); //TODO: Add environment configuration provider
                     });
                     host.ConfigureLogging((hostContext, logging) =>
                     {
@@ -39,8 +40,8 @@ namespace RedmineManagerCLI
                     });
                     host.ConfigureServices(services =>
                     {
-                        services.AddSingleton<IConnection, ConnectionService>();
-                        services.AddSingleton<IManagement, ManagementService>();
+                        services.AddSingleton<IConnection<RedmineManager>, Connection>();
+                        services.AddSingleton<IRedmineIssue, RedmineIssue>(); //TODO: Add IConnection<RedmineManager> to RedmineIssue constructor
                     });
                     host.UseSerilog();
                 })
@@ -50,27 +51,79 @@ namespace RedmineManagerCLI
 
         private static CommandLineBuilder BuildCommandLine()
         {
-            var rootCommand = new RootCommand("Redmine Manager CLI."){
+            var idOption = new Option<string>(
+                "--id",
+                description: "Redmine object id.");
+            idOption.IsRequired = true;
+
+            var readRedmineIssueCommand = new Command("read"){
+                Handler = CommandHandler.Create<IHost, string>(ReadRedmineIssue)
+            };
+            readRedmineIssueCommand.AddOption(idOption);
+
+            var issueCommand = new Command("issue")
+            {
+                Description = "Redmine issue."
+            };
+            issueCommand.AddCommand(readRedmineIssueCommand);
+
+            var rootCommand = new RootCommand("Redmine Manager CLI.")
+            {
                 new Option<bool>(
                     "--info",
-                    description: "Information about the connected user."),
+                    description: "Information about the connected user.")
             };
-            rootCommand.Handler = CommandHandler.Create<ConnectionOptions, IHost>(Run);
+            rootCommand.Handler = CommandHandler.Create<IHost, bool>(Run);
+            rootCommand.AddCommand(issueCommand);
 
             return new CommandLineBuilder(rootCommand);
         }
-
-        private static void Run(ConnectionOptions options, IHost host)
+        private static RedmineManager Connection(IHost host)
         {
+            var connection = host.Services.GetRequiredService<IConnection<RedmineManager>>();
+            
+            var manager = connection.Connect();
+            
+            return manager;
+        }
+
+        private static void Run(IHost host, bool info)
+        {
+            if (info)
+            {            
+                RedmineManager manager;
+                try
+                {
+                    manager = Connection(host);
+                }
+                catch (ConnectionServiceBaseException)
+                {
+                    System.Console.WriteLine("Ошибка при подключении к серверу.");
+                    return;
+                }
+
+                var currentUser = manager.GetCurrentUser();
+                Console.WriteLine($"Текущий пользователь:\n\tID: {currentUser.Id}\n\tПолное имя: {currentUser.FirstName} {currentUser.LastName}");
+            }
+        }
+
+        private static void ReadRedmineIssue(IHost host, string id)
+        {
+            RedmineManager manager;
+            try
+            {
+                manager = Connection(host);
+            }
+            catch (ConnectionServiceBaseException)
+            {
+                System.Console.WriteLine("Ошибка при подключении к серверу.");
+                return;
+            }
+
             var serviceProvider = host.Services;
-            var connection = serviceProvider.GetRequiredService<IConnection>();
+            var redmineIssue = serviceProvider.GetRequiredService<IRedmineIssue>();
 
-            connection.Connect(options);
-
-            // var name = options.Name;
-            // logger.LogInformation(GreetEvent, "Greeting was requested for: {name}", name);
-            // greeter.Greet(name);
+            redmineIssue.Read(manager, id);
         }
     }
-
 }
