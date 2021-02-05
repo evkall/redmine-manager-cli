@@ -17,10 +17,10 @@ namespace RedmineManagerCLI.ConnectionService
             this.log = log;
             this.config = config;
         }
-        public RedmineManager Connect()
+        public RedmineManager Connect(string section)
         {
             ConnectionOptions options = new ConnectionOptions();
-            config.GetSection(nameof(ConnectionOptions)).Bind(options);
+            config.GetSection(nameof(ConnectionOptions)).GetSection(section).Bind(options);
 
             RedmineManager manager;
 

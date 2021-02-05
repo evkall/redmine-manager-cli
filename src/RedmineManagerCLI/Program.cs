@@ -14,10 +14,15 @@ using Serilog;
 using Redmine.Net.Api;
 
 using RedmineManagerCLI.ConnectionService;
+using RedmineManagerCLI.ManagementService;
 
 
 namespace RedmineManagerCLI
 {
+    public enum ReadableRedmineObjects
+    {
+        RedmineIssue
+    }
     class Program
     {
         static async Task Main(string[] args) => await BuildCommandLine()
@@ -41,7 +46,7 @@ namespace RedmineManagerCLI
                     host.ConfigureServices(services =>
                     {
                         services.AddSingleton<IConnection<RedmineManager>, Connection>();
-                        services.AddSingleton<IRedmineIssue, RedmineIssue>(); //TODO: Add IConnection<RedmineManager> to RedmineIssue constructor
+                        services.AddSingleton<IManagement, Management>(); //TODO: Add IConnection<RedmineManager> to RedmineIssue constructor
                     });
                     host.UseSerilog();
                 })
@@ -51,50 +56,73 @@ namespace RedmineManagerCLI
 
         private static CommandLineBuilder BuildCommandLine()
         {
+            var readCommandArgument = new Argument<ReadableRedmineObjects>(
+                "name",
+                description: "Redmine object name"
+            );
+
+            var connectionSettingsSection = new Option<string>(
+                "--connection-section",
+                getDefaultValue: () => "Default",
+                description: "Connection settings section"
+            );
+            connectionSettingsSection.AddAlias("-cs");
+
+            var listParametersSection = new Option<string>(
+                "--list-section",
+                getDefaultValue: () => "Default",
+                description: "List parameters section"
+            );
+            listParametersSection.AddAlias("-ls");
+
             var idOption = new Option<string>(
                 "--id",
-                description: "Redmine object id.");
+                description: "Redmine object id");
             idOption.IsRequired = true;
 
-            var readRedmineIssueCommand = new Command("read"){
-                Handler = CommandHandler.Create<IHost, string>(ReadRedmineIssue)
+            var readCommand = new Command("read"){
+                Handler = CommandHandler.Create<IHost, ReadableRedmineObjects, string, string>(ReadRedmineObject),
+                Description = "Read redmine object"
             };
-            readRedmineIssueCommand.AddOption(idOption);
-
-            var issueCommand = new Command("issue")
-            {
-                Description = "Redmine issue."
+            readCommand.AddArgument(readCommandArgument);
+            readCommand.AddOption(idOption);
+            
+            var listCommand = new Command("list"){
+                Handler = CommandHandler.Create<IHost, ReadableRedmineObjects, string, string>(ReadRedmineObjects),
+                Description = "Read redmine object list"
             };
-            issueCommand.AddCommand(readRedmineIssueCommand);
+            listCommand.AddArgument(readCommandArgument);
+            listCommand.AddOption(listParametersSection);
 
-            var rootCommand = new RootCommand("Redmine Manager CLI.")
+            var rootCommand = new RootCommand("Redmine Manager CLI")
             {
                 new Option<bool>(
                     "--info",
-                    description: "Information about the connected user.")
+                    description: "Information about the connected user")
             };
-            rootCommand.Handler = CommandHandler.Create<IHost, bool>(Run);
-            rootCommand.AddCommand(issueCommand);
+            rootCommand.Handler = CommandHandler.Create<IHost, bool, string>(Run);
+            rootCommand.AddGlobalOption(connectionSettingsSection);
+            rootCommand.AddCommand(readCommand);
+            rootCommand.AddCommand(listCommand);
 
             return new CommandLineBuilder(rootCommand);
         }
-        private static RedmineManager Connection(IHost host)
+        private static RedmineManager Connection(IHost host, string section)
         {
             var connection = host.Services.GetRequiredService<IConnection<RedmineManager>>();
-            
-            var manager = connection.Connect();
+            var manager = connection.Connect(section);
             
             return manager;
         }
 
-        private static void Run(IHost host, bool info)
+        private static void Run(IHost host, bool info, string connectionSection)
         {
             if (info)
-            {            
+            {         
                 RedmineManager manager;
                 try
                 {
-                    manager = Connection(host);
+                    manager = Connection(host, connectionSection);
                 }
                 catch (ConnectionServiceBaseException)
                 {
@@ -107,23 +135,42 @@ namespace RedmineManagerCLI
             }
         }
 
-        private static void ReadRedmineIssue(IHost host, string id)
+        private static void ReadRedmineObject(IHost host, ReadableRedmineObjects name, string id, string connectionSection)
         {
             RedmineManager manager;
             try
             {
-                manager = Connection(host);
+                manager = Connection(host, connectionSection);
             }
             catch (ConnectionServiceBaseException)
             {
-                System.Console.WriteLine("Ошибка при подключении к серверу.");
+                Console.WriteLine("Ошибка при подключении к серверу.");
                 return;
             }
 
             var serviceProvider = host.Services;
-            var redmineIssue = serviceProvider.GetRequiredService<IRedmineIssue>();
+            var management = serviceProvider.GetRequiredService<IManagement>();
 
-            redmineIssue.Read(manager, id);
+            management.ReadRedmineObject(manager, name.ToString(), id);
+        }
+
+        private static void ReadRedmineObjects(IHost host, ReadableRedmineObjects name, string connectionSection, string listSection)
+        {
+            RedmineManager manager;
+            try
+            {
+                manager = Connection(host, connectionSection);
+            }
+            catch (ConnectionServiceBaseException)
+            {
+                Console.WriteLine("Ошибка при подключении к серверу.");
+                return;
+            }
+
+            var serviceProvider = host.Services;
+            var management = serviceProvider.GetRequiredService<IManagement>();
+
+            management.ReadRedmineObjects(manager, name.ToString(), listSection);
         }
     }
 }

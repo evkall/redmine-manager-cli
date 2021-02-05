@@ -8,29 +8,12 @@ using Microsoft.Extensions.Logging;
 using Redmine.Net.Api;
 using Redmine.Net.Api.Types;
 
-using RedmineManagerCLI.Services;
+using RedmineManagerCLI.RedmineObjects;
 
 namespace RedmineManagerCLI
 {
-    interface IRedmineIssue : IReadable
+    public class RedmineIssue : IReadable
     {
-
-    }
-
-    public class RedmineIssue : IRedmineIssue
-    {
-        private readonly ILogger<RedmineIssue> log;
-        private readonly IConfiguration config;
-
-        public RedmineIssue(ILogger<RedmineIssue> log, IConfiguration config)
-        {
-            this.log = log;
-            this.config = config;
-        }
-
-
-        // public void Create() => Manager.CreateObject<Issue>(new Issue());
-
         public void Read(RedmineManager manager, string id)
         {
             var issue = manager.GetObject<Issue>(id, null);

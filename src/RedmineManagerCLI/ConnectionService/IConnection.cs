@@ -5,6 +5,6 @@ namespace RedmineManagerCLI.ConnectionService
 {
     interface IConnection<T> where T: RedmineManager
     {
-        T Connect();
+        T Connect(string section);
     }
 }

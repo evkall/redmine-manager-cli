@@ -3,11 +3,11 @@ using System.Collections.Specialized;
 using Redmine.Net.Api;
 
 
-namespace RedmineManagerCLI.Services
+namespace RedmineManagerCLI.RedmineObjects
 {
     interface ICreatable
     {
-        void Create();
+        void Create(RedmineManager manager);
     }
 
     interface IReadable
@@ -19,12 +19,12 @@ namespace RedmineManagerCLI.Services
 
     interface IUpdateable
     {
-        void Update(string id);
+        void Update(RedmineManager manager, string id);
     }
 
     interface IDeleteable
     {
-        void Delete(string id);
+        void Delete(RedmineManager manager, string id);
         
     }
 }
