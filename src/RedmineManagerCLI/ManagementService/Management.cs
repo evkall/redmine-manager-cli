@@ -47,21 +47,21 @@ namespace RedmineManagerCLI.ManagementService
         }
         public void ReadRedmineObjects(RedmineManager manager, string name, string section)
         {
-            config.GetSection("ListParameters").GetSection(section).Bind(y);
+            var x = config.GetSection("ListParameters").GetSection(section).GetChildren();
 
+            var y = new NameValueCollection(x.Count());
 
+            foreach (var item in x)
+            {
+                y.Add(item.Key, item.Value);
+            }
 
-            // foreach (var item in x.GetChildren())
-            // {
-            //     System.Console.WriteLine(item);
-            // }
-
-            // var readableRedmineObjectType = from ReadableRedmineObject in ReadableRedmineObjects
-            //                                 where ReadableRedmineObject.Name == name
-            //                                 select ReadableRedmineObject;
+            var readableRedmineObjectType = from ReadableRedmineObject in ReadableRedmineObjects
+                                            where ReadableRedmineObject.Name == name
+                                            select ReadableRedmineObject;
             
-            // var readableRedmineObject = (IReadable)Activator.CreateInstance(readableRedmineObjectType.Single());
-            // readableRedmineObject.GetList(manager, );
+            var readableRedmineObject = (IReadable)Activator.CreateInstance(readableRedmineObjectType.Single());
+            readableRedmineObject.GetList(manager, y);
 
         }
     }

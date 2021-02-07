@@ -27,6 +27,10 @@ namespace RedmineManagerCLI
         public void GetList(RedmineManager manager, NameValueCollection parametrs)
         {
             var issues = manager.GetObjects<Issue>(parametrs);
+            foreach (var item in issues)
+            {
+                Console.WriteLine(item.Id);
+            }
         }
     }
 }
