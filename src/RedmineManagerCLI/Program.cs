@@ -23,6 +23,12 @@ namespace RedmineManagerCLI
     {
         RedmineIssue
     }
+
+    public enum CreateableRedmineObjects
+    {
+        RedmineIssue
+    }
+
     class Program
     {
         static async Task Main(string[] args) => await BuildCommandLine()
@@ -46,7 +52,7 @@ namespace RedmineManagerCLI
                     host.ConfigureServices(services =>
                     {
                         services.AddSingleton<IConnection<RedmineManager>, Connection>();
-                        services.AddSingleton<IManagement, Management>(); //TODO: Add IConnection<RedmineManager> to RedmineIssue constructor
+                        services.AddSingleton<IManagement, Management>(); //TODO: Add IConnection<RedmineManager> to Management constructor
                     });
                     host.UseSerilog();
                 })
@@ -80,6 +86,19 @@ namespace RedmineManagerCLI
                 description: "Redmine object id");
             idOption.IsRequired = true;
 
+            var createParametersSection = new Option<string>(
+                "--create-section",
+                description: "Create parameters section"
+            );
+            createParametersSection.IsRequired = true;
+
+            var createCommand = new Command("create"){
+                Handler = CommandHandler.Create<IHost, CreateableRedmineObjects, string, string>(CreateRedmineObject),
+                Description = "Create redmine object"
+            };
+            createCommand.AddOption(createParametersSection);
+            createCommand.AddArgument(readCommandArgument);
+
             var readCommand = new Command("read"){
                 Handler = CommandHandler.Create<IHost, ReadableRedmineObjects, string, string>(ReadRedmineObject),
                 Description = "Read redmine object"
@@ -102,6 +121,7 @@ namespace RedmineManagerCLI
             };
             rootCommand.Handler = CommandHandler.Create<IHost, bool, string>(Run);
             rootCommand.AddGlobalOption(connectionSettingsSection);
+            rootCommand.AddCommand(createCommand);
             rootCommand.AddCommand(readCommand);
             rootCommand.AddCommand(listCommand);
 
@@ -133,6 +153,25 @@ namespace RedmineManagerCLI
                 var currentUser = manager.GetCurrentUser();
                 Console.WriteLine($"Текущий пользователь:\n\tID: {currentUser.Id}\n\tПолное имя: {currentUser.FirstName} {currentUser.LastName}");
             }
+        }
+
+        private static void CreateRedmineObject(IHost host, CreateableRedmineObjects name, string createSection, string connectionSection)
+        {
+            RedmineManager manager;
+            try
+            {
+                manager = Connection(host, connectionSection);
+            }
+            catch (ConnectionServiceBaseException)
+            {
+                Console.WriteLine("Ошибка при подключении к серверу.");
+                return;
+            }
+
+            var serviceProvider = host.Services;
+            var management = serviceProvider.GetRequiredService<IManagement>();
+
+            management.CreateRedmineObject(manager, name.ToString(), createSection);
         }
 
         private static void ReadRedmineObject(IHost host, ReadableRedmineObjects name, string id, string connectionSection)
