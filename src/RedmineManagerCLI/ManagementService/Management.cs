@@ -3,24 +3,25 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.IO;
-using System.Text;
-using System.Xml;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Redmine.Net.Api;
-using Redmine.Net.Api.Types;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 using RedmineManagerCLI.RedmineObjects;
 
 
 namespace RedmineManagerCLI.ManagementService
 {
+    
     public class Management : IManagement
     {
-        
-        private readonly List<Type> ReadableRedmineObjects = new List<Type>(){typeof(RedmineIssue)};
+        private readonly List<Type> CreateableRedmineObjects = new(){typeof(RedmineIssue)};
+        private readonly List<Type> ReadableRedmineObjects = new(){typeof(RedmineIssue)};
+        private readonly List<Type> UpdateableRedmineObjects = new(){typeof(RedmineIssue)};
+        private readonly List<Type> DeleteableRedmineObjects = new(){typeof(RedmineIssue)};
         private readonly ILogger<Management> log;
         private readonly IConfiguration config;
 
@@ -32,25 +33,15 @@ namespace RedmineManagerCLI.ManagementService
 
         public void CreateRedmineObject(RedmineManager manager, string name, string section)
         {
-            // string json = @"{
-            //     'start_date':'2021-02-09',
-            //     'project':'2'
-            // }";
-            
-            // var issue = new Issue();
-            // string json = @"{
-            //     'id': 2
-            // }";
-            // JsonTextReader reader = new JsonTextReader(new StringReader(json));
-            // issue.ReadJson(reader);
+            var redmineObjectJson = JObject.Parse(System.IO.File.ReadAllText("appsettings.json")).GetValue("RedmineObjectParameters").SelectToken(section).ToString();
+            JsonTextReader redmineObjectReader = new(new StringReader(redmineObjectJson));
 
-            // StringBuilder sb = new StringBuilder();
-            // StringWriter sw = new StringWriter(sb);
+            var CreateableRedmineObjectType = from CreateableRedmineObject in CreateableRedmineObjects
+                                            where CreateableRedmineObject.Name == name
+                                            select CreateableRedmineObject;
 
-            // JsonWriter writer = new JsonTextWriter(sw);
-            // issue.WriteJson(writer);
-            // x.WriteJson(writer);
-            // System.Console.WriteLine(sw);
+            var createableRedmineObject = (ICreateable)Activator.CreateInstance(CreateableRedmineObjectType.Single());
+            createableRedmineObject.Create(manager, redmineObjectReader);
         }
         
         public void ReadRedmineObject(RedmineManager manager, string name, string id)
@@ -62,21 +53,35 @@ namespace RedmineManagerCLI.ManagementService
             var readableRedmineObject = (IReadable)Activator.CreateInstance(readableRedmineObjectType.Single());
             readableRedmineObject.Read(manager, id);
         }
-        public void UpdateRedmineObject(RedmineManager manager, string name){
+        public void UpdateRedmineObject(RedmineManager manager, string name, string id, string section)
+        {
+            var redmineObjectJson = JObject.Parse(System.IO.File.ReadAllText("appsettings.json")).GetValue("RedmineObjectParameters").SelectToken(section).ToString();
+            JsonTextReader redmineObjectReader = new(new StringReader(redmineObjectJson));
 
+            var UpdateableRedmineObjectType = from UpdateableRedmineObject in UpdateableRedmineObjects
+                                              where UpdateableRedmineObject.Name == name
+                                              select UpdateableRedmineObject;
+
+            var updateableRedmineObject = (IUpdateable)Activator.CreateInstance(UpdateableRedmineObjectType.Single());
+            updateableRedmineObject.Update(manager, id, redmineObjectReader);
         }
-        public void DeleteRedmineObject(RedmineManager manager, string name){
-
+        public void DeleteRedmineObject(RedmineManager manager, string name, string id)
+        {
+            var deleteableRedmineObjectType = from DeleteableRedmineObject in DeleteableRedmineObjects
+                                            where DeleteableRedmineObject.Name == name
+                                            select DeleteableRedmineObject;
+            
+            var deleteableRedmineObject = (IDeleteable)Activator.CreateInstance(deleteableRedmineObjectType.Single());
+            deleteableRedmineObject.Delete(manager, id);
         }
         public void ReadRedmineObjects(RedmineManager manager, string name, string section)
         {
-            var x = config.GetSection("ListParameters").GetSection(section).GetChildren();
+            var parameters = config.GetSection("ListParameters").GetSection(section).GetChildren();
 
-            var y = new NameValueCollection(x.Count());
-
-            foreach (var item in x)
+            var filter = new NameValueCollection(parameters.Count());
+            foreach (var parameter in parameters)
             {
-                y.Add(item.Key, item.Value);
+                filter.Add(parameter.Key, parameter.Value);
             }
 
             var readableRedmineObjectType = from ReadableRedmineObject in ReadableRedmineObjects
@@ -84,7 +89,7 @@ namespace RedmineManagerCLI.ManagementService
                                             select ReadableRedmineObject;
             
             var readableRedmineObject = (IReadable)Activator.CreateInstance(readableRedmineObjectType.Single());
-            readableRedmineObject.GetList(manager, y);
+            readableRedmineObject.GetList(manager, filter);
 
         }
     }

@@ -1,13 +1,14 @@
 using System.Collections.Specialized;
 
 using Redmine.Net.Api;
+using Newtonsoft.Json;
 
 
 namespace RedmineManagerCLI.RedmineObjects
 {
-    interface ICreatable
+    interface ICreateable
     {
-        void Create(RedmineManager manager);
+        void Create(RedmineManager manager, JsonTextReader reader);
     }
 
     interface IReadable
@@ -19,7 +20,7 @@ namespace RedmineManagerCLI.RedmineObjects
 
     interface IUpdateable
     {
-        void Update(RedmineManager manager, string id);
+        void Update(RedmineManager manager, string id, JsonTextReader reader);
     }
 
     interface IDeleteable
