@@ -47,7 +47,8 @@ namespace RedmineManagerCLI
                     host.ConfigureAppConfiguration((configuration) =>
                     {
                         configuration.Sources.Clear();
-                        configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true); //TODO: Add environment configuration provider
+                        configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+                        configuration.AddEnvironmentVariables();
                     });
                     host.ConfigureLogging((hostContext, logging) =>
                     {
