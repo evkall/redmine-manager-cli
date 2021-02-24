@@ -4,7 +4,7 @@ using Redmine.Net.Api;
 using Newtonsoft.Json;
 
 
-namespace RedmineManagerCLI.RedmineObjects
+namespace RedmineManagerCLI.ManagementService
 {
     interface ICreateable
     {

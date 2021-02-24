@@ -18,24 +18,33 @@ using RedmineManagerCLI.ManagementService;
 
 namespace RedmineManagerCLI
 {
-    public enum ReadableRedmineObjects
-    {
-        RedmineIssue
-    }
-
     public enum CreateableRedmineObjects
     {
-        RedmineIssue
+        RedmineIssue,
+        RedmineIssueCategory,
+        RedmineProject
+    }
+    public enum ReadableRedmineObjects
+    {
+        RedmineIssue,
+        RedmineIssueCategory,
+        RedmineIssueStatus,
+        RedmineProject,
+        RedmineTracker
     }
 
     public enum UpdateableRedmineObjects
     {
-        RedmineIssue
+        RedmineIssue,
+        RedmineIssueCategory,
+        RedmineProject
     }
 
     public enum DeleteableRedmineObjects
     {
-        RedmineIssue
+        RedmineIssue,
+        RedmineIssueCategory,
+        RedmineProject
     }
 
     class Program
@@ -62,7 +71,7 @@ namespace RedmineManagerCLI
                     host.ConfigureServices(services =>
                     {
                         services.AddSingleton<IConnection<RedmineManager>, Connection>();
-                        services.AddSingleton<IManagement, Management>(); //TODO: Add IConnection<RedmineManager> to Management constructor
+                        services.AddSingleton<IManagement, Management>();
                     });
                     host.UseSerilog();
                 })
@@ -214,7 +223,7 @@ namespace RedmineManagerCLI
             var serviceProvider = host.Services;
             var management = serviceProvider.GetRequiredService<IManagement>();
 
-            management.CreateRedmineObject(manager, name.ToString(), createSection);
+            // management.CreateRedmineObject(manager, name.ToString(), createSection);
         }
 
         private static void ReadRedmineObject(IHost host, ReadableRedmineObjects name, string id, string connectionSection)
@@ -226,7 +235,7 @@ namespace RedmineManagerCLI
             }
             catch (ConnectionServiceBaseException)
             {
-                Console.WriteLine("Ошибка при подключении к серверу.");
+                Console.WriteLine("Ошибка при подключении к серверу");
                 return;
             }
 
@@ -245,14 +254,14 @@ namespace RedmineManagerCLI
             }
             catch (ConnectionServiceBaseException)
             {
-                Console.WriteLine("Ошибка при подключении к серверу.");
+                Console.WriteLine("Ошибка при подключении к серверу");
                 return;
             }
 
             var serviceProvider = host.Services;
             var management = serviceProvider.GetRequiredService<IManagement>();
 
-            management.UpdateRedmineObject(manager, name.ToString(), id, updateSection);
+            // management.UpdateRedmineObject(manager, name.ToString(), id, updateSection);
         }
 
         private static void DeleteRedmineObject(IHost host, DeleteableRedmineObjects name, string connectionSection, string id)
@@ -264,14 +273,14 @@ namespace RedmineManagerCLI
             }
             catch (ConnectionServiceBaseException)
             {
-                Console.WriteLine("Ошибка при подключении к серверу.");
+                Console.WriteLine("Ошибка при подключении к серверу");
                 return;
             }
 
             var serviceProvider = host.Services;
             var management = serviceProvider.GetRequiredService<IManagement>();
 
-            management.DeleteRedmineObject(manager, name.ToString(), id);
+            // management.DeleteRedmineObject(manager, name.ToString(), id);
         }
 
         private static void ReadRedmineObjects(IHost host, ReadableRedmineObjects name, string connectionSection, string listSection)
@@ -283,7 +292,7 @@ namespace RedmineManagerCLI
             }
             catch (ConnectionServiceBaseException)
             {
-                Console.WriteLine("Ошибка при подключении к серверу.");
+                Console.WriteLine("Ошибка при подключении к серверу");
                 return;
             }
 

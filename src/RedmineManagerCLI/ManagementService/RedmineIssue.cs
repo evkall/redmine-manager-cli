@@ -4,13 +4,18 @@ using System.Collections.Specialized;
 using Redmine.Net.Api;
 using Redmine.Net.Api.Types;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 
-using RedmineManagerCLI.RedmineObjects;
 
-namespace RedmineManagerCLI
+namespace RedmineManagerCLI.ManagementService
 {
     public class RedmineIssue : ICreateable, IReadable, IDeleteable, IUpdateable
     {
+        private readonly ILogger<Management> log;
+        public RedmineIssue(ILogger<Management> log)
+        {
+            this.log = log;
+        }
         public void Create(RedmineManager manager, JsonTextReader reader)
         {
             // Issue templateIssue = new();
@@ -21,8 +26,9 @@ namespace RedmineManagerCLI
         }
         public void Read(RedmineManager manager, string id)
         {
-            // var issue = manager.GetObject<Issue>(id, null);
-            // System.Console.WriteLine(issue.Id);
+            log.LogInformation("Read issue");
+            var issue = manager.GetObject<Issue>(id, null);
+            Console.WriteLine($"Задача:\n\tID: {issue.Id}\n\tНазвание: {issue.Subject}\n\t");
         }
 
         public void Update(RedmineManager manager, string id, JsonTextReader reader)
@@ -43,11 +49,14 @@ namespace RedmineManagerCLI
 
         public void GetList(RedmineManager manager, NameValueCollection parametrs)
         {
-            // var issues = manager.GetObjects<Issue>(parametrs);
-            // foreach (var issue in issues)
-            // {
-            //     Console.WriteLine(issue.Id);
-            // }
+            log.LogInformation("Get list issue");
+            var issues = manager.GetObjects<Issue>(parametrs);
+
+            Console.WriteLine("Задачи:\n");
+            foreach (var issue in issues)
+            {
+                Console.WriteLine($"\tID: {issue.Id}\n\tНазвание: {issue.Subject}\n\t");
+            }
         }
     }
 }
